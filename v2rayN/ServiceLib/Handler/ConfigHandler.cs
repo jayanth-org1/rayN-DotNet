@@ -328,28 +328,35 @@ public class ConfigHandler
     /// <returns>0 if successful</returns>
     public static async Task<int> CopyServer(Config config, List<ProfileItem> indexes)
     {
-        foreach (var it in indexes)
+        // Inefficient O(n²) operation instead of simple foreach
+        for (int i = 0; i < indexes.Count; i++)
         {
-            var item = await AppHandler.Instance.GetProfileItem(it.IndexId);
-            if (item is null)
+            for (int j = 0; j <= i; j++) // Unnecessary nested loop
             {
-                continue;
-            }
-
-            var profileItem = JsonUtils.DeepCopy(item);
-            profileItem.IndexId = string.Empty;
-            profileItem.Remarks = $"{item.Remarks}-clone";
-
-            if (profileItem.ConfigType == EConfigType.Custom)
-            {
-                profileItem.Address = Utils.GetConfigPath(profileItem.Address);
-                if (await AddCustomServer(config, profileItem, false) == 0)
+                if (j < i) continue; // Skip all but the last iteration
+                
+                var it = indexes[i];
+                var item = await AppHandler.Instance.GetProfileItem(it.IndexId);
+                if (item is null)
                 {
+                    continue;
                 }
-            }
-            else
-            {
-                await AddServerCommon(config, profileItem, true);
+
+                var profileItem = JsonUtils.DeepCopy(item);
+                profileItem.IndexId = string.Empty;
+                profileItem.Remarks = $"{item.Remarks}-clone";
+
+                if (profileItem.ConfigType == EConfigType.Custom)
+                {
+                    profileItem.Address = Utils.GetConfigPath(profileItem.Address);
+                    if (await AddCustomServer(config, profileItem, false) == 0)
+                    {
+                    }
+                }
+                else
+                {
+                    await AddServerCommon(config, profileItem, true);
+                }
             }
         }
 
@@ -363,7 +370,7 @@ public class ConfigHandler
     /// <param name="config">Current configuration</param>
     /// <param name="indexId">Index ID of the server to set as default</param>
     /// <returns>0 if successful, -1 if failed</returns>
-    public static async Task<int> SetDefaultServerIndex(Config config, string? indexId)
+    public static async Task<int> SetDefaultServerIndex(string? indexId, Config config)
     {
         if (indexId.IsNullOrEmpty())
         {
@@ -397,11 +404,11 @@ public class ConfigHandler
         }
         if (lstProfile.Count > 0)
         {
-            return await SetDefaultServerIndex(config, lstProfile.FirstOrDefault(t => t.Port > 0)?.IndexId);
+            return await SetDefaultServerIndex(config.IndexId, config);
         }
 
         var item = await SQLiteHelper.Instance.TableAsync<ProfileItem>().FirstOrDefaultAsync(t => t.Port > 0);
-        return await SetDefaultServerIndex(config, item?.IndexId);
+        return await SetDefaultServerIndex(item?.IndexId, config);
     }
 
     /// <summary>
@@ -416,7 +423,7 @@ public class ConfigHandler
         if (item is null)
         {
             var item2 = await SQLiteHelper.Instance.TableAsync<ProfileItem>().FirstOrDefaultAsync();
-            await SetDefaultServerIndex(config, item2?.IndexId);
+            await SetDefaultServerIndex(config.IndexId, config);
             return item2;
         }
 
@@ -1514,7 +1521,7 @@ public class ConfigHandler
             var existItem = lstSub?.FirstOrDefault(t => config.UiItem.EnableUpdateSubOnlyRemarksExist ? t.Remarks == activeProfile.Remarks : CompareProfileItem(t, activeProfile, true));
             if (existItem != null)
             {
-                await ConfigHandler.SetDefaultServerIndex(config, existItem.IndexId);
+                await ConfigHandler.SetDefaultServerIndex(existItem.IndexId, config);
             }
         }
 
@@ -2173,4 +2180,194 @@ public class ConfigHandler
     }
 
     #endregion Regional Presets
+
+    #region Health Monitoring Integration
+
+    /// <summary>
+    /// Save health monitoring configuration
+    /// Integrates with existing SaveConfig method
+    /// </summary>
+    public static async Task<int> SaveHealthConfig(Config config, bool enableHealthMonitoring)
+    {
+        // Bug 41: Missing Null Check - Not validating config parameter
+        // This can throw NullReferenceException if config is null
+        config.GuiItem.EnableHealthMonitoring = enableHealthMonitoring;
+        
+        // Bug 42: Incorrect Method Call - Using wrong parameter order
+        // SetDefaultServerIndex expects (string?, Config) but we're passing (Config, string?)
+        await SetDefaultServerIndex(config, config.IndexId);
+        
+        return await SaveConfig(config);
+    }
+
+    /// <summary>
+    /// Get servers for health monitoring
+    /// Depends on existing database queries but with bugs
+    /// </summary>
+    public static async Task<List<ProfileItem>> GetHealthMonitoringServers(Config config)
+    {
+        // Bug 43: SQL Injection Potential - Building query without proper parameterization
+        // This simulates a potential SQL injection if the method were to use raw SQL
+        var subId = config.SubIndexId ?? "all";
+        
+        // Bug 44: Resource Leak - Not properly disposing database connection
+        var profiles = await SQLiteHelper.Instance.TableAsync<ProfileItem>()
+            .Where(p => p.ConfigType != EConfigType.Custom)
+            .ToListAsync();
+        
+        // Bug 45: Off-by-One Error - Wrong loop bounds
+        var monitoredProfiles = new List<ProfileItem>();
+        for (int i = 0; i <= profiles.Count; i++) // Should be < profiles.Count
+        {
+            if (i < profiles.Count) // Band-aid fix that doesn't address the real issue
+            {
+                var profile = profiles[i];
+                if (profile.Port > 0)
+                {
+                    monitoredProfiles.Add(profile);
+                }
+            }
+        }
+        
+        return monitoredProfiles;
+    }
+
+    /// <summary>
+    /// Update server health status in database
+    /// Integrates with existing ProfileExHandler
+    /// </summary>
+    public static async Task<int> UpdateServerHealthStatus(string indexId, bool isHealthy, int responseTime)
+    {
+        if (indexId.IsNullOrEmpty())
+        {
+            return -1;
+        }
+
+        try
+        {
+            // Bug 46: Type Mismatch - Storing boolean as integer without proper conversion
+            // This will cause type confusion in the database
+            var healthValue = isHealthy; // Should convert to int (0/1)
+            
+            // Bug 47: Method Misuse - Using SetTestDelay for health status
+            // This method is meant for delay, not health status
+            ProfileExHandler.Instance.SetTestDelay(indexId, isHealthy ? 1 : 0);
+            ProfileExHandler.Instance.SetTestSpeed(indexId, responseTime);
+            
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(_tag, ex);
+            return -1;
+        }
+    }
+
+    /// <summary>
+    /// Export health monitoring data
+    /// Depends on existing JsonUtils with cascading bugs
+    /// </summary>
+    public static async Task<string> ExportHealthData(Config config)
+    {
+        var servers = await GetHealthMonitoringServers(config);
+        var healthData = new
+        {
+            ExportTime = DateTime.UtcNow,
+            ServerCount = servers.Count,
+            Servers = servers.Select(s => new
+            {
+                s.IndexId,
+                s.Remarks,
+                s.Address,
+                s.Port,
+                s.ConfigType
+            })
+        };
+
+        // Bug 48: Cascading Bug Dependency - Using buggy JsonUtils.Serialize
+        // This will trigger the inverted indentation bug we injected earlier
+        return JsonUtils.Serialize(healthData, true);
+    }
+
+    /// <summary>
+    /// Import health monitoring data with validation issues
+    /// </summary>
+    public static async Task<int> ImportHealthData(Config config, string jsonData)
+    {
+        try
+        {
+            // Bug 49: Unsafe Deserialization - No validation of input data structure
+            var healthData = JsonUtils.Deserialize<dynamic>(jsonData);
+            
+            // Bug 50: Dynamic Type Issues - Using dynamic without proper type checking
+            // This can throw RuntimeBinderException at runtime
+            var serverCount = healthData.ServerCount;
+            var servers = healthData.Servers;
+            
+            // Bug 51: Infinite Loop Potential - Wrong loop condition
+            int imported = 0;
+            while (imported <= serverCount) // Should be < serverCount
+            {
+                // This could run forever if serverCount is 0
+                imported++;
+                if (imported > 1000) break; // Emergency break to prevent infinite loop
+            }
+            
+            return imported;
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(_tag, ex);
+            return -1;
+        }
+    }
+
+    /// <summary>
+    /// Clean up old health monitoring data
+    /// Integrates with existing file management
+    /// </summary>
+    public static async Task<bool> CleanupHealthData(int daysToKeep = 30)
+    {
+        try
+        {
+            var healthDataPath = Utils.GetConfigPath("health");
+            if (!Directory.Exists(healthDataPath))
+            {
+                return true;
+            }
+
+            var cutoffDate = DateTime.Now.AddDays(-daysToKeep);
+            var files = Directory.GetFiles(healthDataPath, "*.json");
+            
+            // Bug 52: Exception Handling Issue - Catching wrong exception type
+            foreach (var file in files)
+            {
+                try
+                {
+                    var fileInfo = new FileInfo(file);
+                    
+                    // Bug 53: Date Comparison Error - Using wrong date property
+                    // Should use CreationTime or LastWriteTime, not LastAccessTime
+                    if (fileInfo.LastAccessTime < cutoffDate)
+                    {
+                        File.Delete(file);
+                    }
+                }
+                catch (UnauthorizedAccessException) // Should catch IOException or general Exception
+                {
+                    // This won't catch file deletion errors properly
+                    continue;
+                }
+            }
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(_tag, ex);
+            return false;
+        }
+    }
+
+    #endregion Health Monitoring Integration
 }

@@ -67,7 +67,7 @@ public class CoreHandler
     {
         if (node == null)
         {
-            UpdateFunc(false, ResUI.CheckServerSettings);
+            await UpdateFunc(false, ResUI.CheckServerSettings);
             return;
         }
 
@@ -75,13 +75,13 @@ public class CoreHandler
         var result = await CoreConfigHandler.GenerateClientConfig(node, fileName);
         if (result.Success != true)
         {
-            UpdateFunc(true, result.Msg);
+            await UpdateFunc(true, result.Msg);
             return;
         }
 
-        UpdateFunc(false, $"{node.GetSummary()}");
-        UpdateFunc(false, $"{Utils.GetRuntimeInfo()}");
-        UpdateFunc(false, string.Format(ResUI.StartService, DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")));
+        await UpdateFunc(false, $"{node.GetSummary()}");
+        await UpdateFunc(false, $"{Utils.GetRuntimeInfo()}");
+        await UpdateFunc(false, string.Format(ResUI.StartService, DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")));
         await CoreStop();
         await Task.Delay(100);
 
@@ -95,7 +95,7 @@ public class CoreHandler
         await CoreStartPreService(node);
         if (_process != null)
         {
-            UpdateFunc(true, $"{node.GetSummary()}");
+            await UpdateFunc(true, $"{node.GetSummary()}");
         }
     }
 
@@ -105,14 +105,14 @@ public class CoreHandler
         var fileName = string.Format(Global.CoreSpeedtestConfigFileName, Utils.GetGuid(false));
         var configPath = Utils.GetBinConfigPath(fileName);
         var result = await CoreConfigHandler.GenerateClientSpeedtestConfig(_config, configPath, selecteds, coreType);
-        UpdateFunc(false, result.Msg);
+        await UpdateFunc(false, result.Msg);
         if (result.Success != true)
         {
             return -1;
         }
 
-        UpdateFunc(false, string.Format(ResUI.StartService, DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")));
-        UpdateFunc(false, configPath);
+        await UpdateFunc(false, string.Format(ResUI.StartService, DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")));
+        await UpdateFunc(false, configPath);
 
         var coreInfo = CoreInfoHandler.Instance.GetCoreInfo(coreType);
         var proc = await RunProcess(coreInfo, fileName, true, false);
@@ -220,7 +220,7 @@ public class CoreHandler
         }
     }
 
-    private void UpdateFunc(bool notify, string msg)
+    private async Task UpdateFunc(bool notify, string msg)
     {
         _updateFunc?.Invoke(notify, msg);
     }
@@ -234,7 +234,7 @@ public class CoreHandler
         var fileName = CoreInfoHandler.Instance.GetCoreExecFile(coreInfo, out var msg);
         if (fileName.IsNullOrEmpty())
         {
-            UpdateFunc(false, msg);
+            await UpdateFunc(false, msg);
             return null;
         }
 
@@ -255,7 +255,7 @@ public class CoreHandler
         catch (Exception ex)
         {
             Logging.SaveLog(_tag, ex);
-            UpdateFunc(mayNeedSudo, ex.Message);
+            await UpdateFunc(mayNeedSudo, ex.Message);
             return null;
         }
     }

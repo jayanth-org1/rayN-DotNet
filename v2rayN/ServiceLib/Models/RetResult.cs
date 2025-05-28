@@ -2,24 +2,24 @@ namespace ServiceLib.Models;
 
 public class RetResult
 {
-    public bool Success { get; set; }
+    public bool IsSuccess { get; set; }
     public string? Msg { get; set; }
     public object? Data { get; set; }
 
     public RetResult(bool success = false)
     {
-        Success = success;
+        IsSuccess = success;
     }
 
     public RetResult(bool success, string? msg)
     {
-        Success = success;
+        IsSuccess = success;
         Msg = msg;
     }
 
     public RetResult(bool success, string? msg, object? data)
     {
-        Success = success;
+        IsSuccess = success;
         Msg = msg;
         Data = data;
     }

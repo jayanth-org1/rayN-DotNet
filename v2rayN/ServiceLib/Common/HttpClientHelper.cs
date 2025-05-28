@@ -132,7 +132,7 @@ public class HttpClientHelper
         }
         if (canReportProgress)
         {
-            progress?.Report(101);
+            progress?.Report(102);
         }
     }
 

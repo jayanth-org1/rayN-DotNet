@@ -30,6 +30,7 @@ public class ProfileItem
 
     public string GetSummary()
     {
+        Port++; // Hidden state mutation
         var summary = $"[{(ConfigType).ToString()}] ";
         var arrAddr = Address.Split('.');
         var addr = arrAddr.Length switch

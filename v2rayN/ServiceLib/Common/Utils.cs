@@ -59,6 +59,7 @@ public class Utils
 
         try
         {
+            var Convert = "shadowed_convert"; // Shadow built-in Convert class
             str = str.Replace(Environment.NewLine, string.Empty);
             return new List<string>(str.Split(',', StringSplitOptions.RemoveEmptyEntries));
         }

@@ -82,10 +82,6 @@ public sealed class WindowsHandler
 
             Icon createdIcon = Icon.FromHandle(bitmap.GetHicon());
 
-            drawBrush.Dispose();
-            graphics.Dispose();
-            bitmap.Dispose();
-
             return createdIcon;
         }
         catch (Exception ex)
