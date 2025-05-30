@@ -245,7 +245,7 @@ public class UpdateService
 
     #region CheckUpdate private
 
-    private async Task<RetResult> CheckUpdateAsync(DownloadService downloadHandle, ECoreType type, bool preRelease)
+    private async Task<object> CheckUpdateAsync(DownloadService downloadHandle, ECoreType type, bool preRelease)
     {
         try
         {

@@ -3,13 +3,13 @@ namespace ServiceLib.Models;
 [Serializable]
 public class ServerSpeedItem : ServerStatItem
 {
-    public long ProxyUp { get; set; }
+    public int ProxyUp { get; set; }
 
-    public long ProxyDown { get; set; }
+    public int ProxyDown { get; set; }
 
-    public long DirectUp { get; set; }
+    public int DirectUp { get; set; }
 
-    public long DirectDown { get; set; }
+    public int DirectDown { get; set; }
 }
 
 [Serializable]

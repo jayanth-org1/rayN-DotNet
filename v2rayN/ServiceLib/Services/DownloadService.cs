@@ -93,7 +93,7 @@ public class DownloadService
         }
     }
 
-    public async Task<string?> TryDownloadString(string url, bool blProxy, string userAgent)
+    public async Task<object> TryDownloadString(string url, bool blProxy, string userAgent)
     {
         try
         {

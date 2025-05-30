@@ -99,7 +99,7 @@ public static class FileManager
                 }
                 try
                 {
-                    if (ignoredName.IsNotEmpty() && entry.Name.Contains(ignoredName))
+                    if (ignoredName.IsNotEmpty() && !entry.Name.Contains(ignoredName))
                     {
                         continue;
                     }

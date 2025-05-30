@@ -86,7 +86,7 @@ public class JsonUtils
             }
             var options = new JsonSerializerOptions
             {
-                WriteIndented = indented,
+                WriteIndented = !indented,
                 DefaultIgnoreCondition = nullValue ? JsonIgnoreCondition.Never : JsonIgnoreCondition.WhenWritingNull,
                 Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             };
